@@ -17,6 +17,7 @@
 #include <string>
 #include <chrono>
 #include <cstdlib>
+#include <unistd.h>
 #include "GraphSketchTensor.hpp"          // Multi-layer sketch manager
 
 using namespace GraphSketch;              // use GraphSketch namespace
@@ -38,14 +39,14 @@ int main()
 
 
     // ✅ Open dataset (you can switch by commenting/uncommenting below)
-    // std::string filepath  = "data/DARPA/darpa_edges.txt";           // ✅ 1.  DARPA
-    //std::string filepath  = "data/ISCX_IDS2012/data_ids2012.csv";    //    2.  ISCX-IDS 2012
+    std::string filepath  = "data/DARPA/darpa_edges.txt";           // ✅ 1.  DARPA
+    // std::string filepath  = "data/ISCX_IDS2012/data_ids2012.csv";    //    2.  ISCX-IDS 2012
     // std::string filepath  = "data/CIC_IDS2017/friday_edges.txt";  // CIC-IDS 2017 (Friday)
     // std::string filepath  = "data/CIC_IDS2017/tuesday_edges.txt"; // CIC-IDS 2017 (Tuesday)
     // std::string filepath  = "data/CIC_IDS2017/combined_edges.txt";// CIC-IDS 2017 (All)
     // std::string filepath  = "data/ctu_dataset/ctu_edges.csv";         // CTU-13
     // std::string filepath  = "data/IDS2018/Data.csv";            //       3.  IDS-2018
-    std::string filepath = "data/DDOS2019/Data.csv";               //       4.  CIC-DDOS 2019
+    // std::string filepath = "data/DDOS2019/Data.csv";               //       4.  CIC-DDOS 2019
     std::ifstream file(filepath);
     if (!file.is_open())
     {
@@ -103,8 +104,8 @@ int main()
         // ✅ Update sketch
         sketchTensor.addEdge(src, dst, timestamp, protocolID);
 
-        // ✅ Get raw anomaly score
-        float raw_score = sketchTensor.estimateScore(src, dst, timestamp, protocolID);
+        // ✅ Get burst-aware anomaly score
+        float raw_score = sketchTensor.estimateAdaptiveScore(src, dst, timestamp, protocolID);
 
         // ✅ Apply EWMA smoothing to raw score
         ema_score = (edgeCount == 0) ? raw_score : (alpha * raw_score + (1 - alpha) * ema_score);
@@ -136,12 +137,22 @@ int main()
     std::cout << "\nGraph Processing completed-- Now Running Python evaluation..." << std::endl;
 
     // ✅ Run Python evaluation (edit label file path if switching dataset)
+    const char* pythonBinary = std::getenv("GRAPHSKETCH_PYTHON");
+    std::string pythonCommand;
+    if (pythonBinary != nullptr && pythonBinary[0] != '\0') {
+        pythonCommand = pythonBinary;
+    } else if (access(".venv/bin/python", X_OK) == 0) {
+        pythonCommand = ".venv/bin/python";
+    } else {
+        pythonCommand = "python3";
+    }
 
     // 1. DARPA
-    //int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/DARPA/darpa_ground_truth.csv");
+    std::string evalCommand = pythonCommand + " src/GraphSketch_eval.py score.txt data/DARPA/darpa_ground_truth.csv";
+    int eval_status = system(evalCommand.c_str());
 
     // 2. ISCX-IDS 2012
-    //int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/ISCX_IDS2012/label_ids2012.csv");
+    // int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/ISCX_IDS2012/label_ids2012.csv");
 
     // cic-IDS 2017
     // int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/CIC_IDS2017/friday_labels.csv");
@@ -153,7 +164,7 @@ int main()
     // int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/IDS2018/Label.csv");
 
     // 4.  DDOS-2019
-    int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/DDOS2019/Label.csv");
+    // int eval_status = system("python3 src/GraphSketch_eval.py score.txt data/DDOS2019/Label.csv");
 
     if (eval_status != 0)
     {

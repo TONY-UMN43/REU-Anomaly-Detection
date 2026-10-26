@@ -67,5 +67,8 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "__nullptr": "cpp"
-    }
+    },
+    "C_Cpp.copilotHover": "disabled",
+    "github.copilot.chat.copilotDebugCommand.enabled": false,
+    "github.copilot.chat.tools.viewImage.enabled": false
 }

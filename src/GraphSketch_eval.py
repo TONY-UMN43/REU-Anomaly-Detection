@@ -1,6 +1,11 @@
+# import sys
+
+# print("Python executable:", sys.executable)
+# print("Python version:", sys.version)
+
 import numpy as np
 from sklearn.metrics import (
-    roc_auc_score, precision_score, recall_score,
+    roc_auc_score, precision_score, recall_score, f1_score,
     precision_recall_curve, roc_curve, average_precision_score
 )
 
@@ -36,11 +41,35 @@ def evaluate(score_file, label_file):
         for p, r, thr in zip(precisions, recalls, np.append(pr_thresholds, 1.0)):
             f.write(f"{r:.6f}\t{p:.6f}\t{thr:.6f}\n")
 
+    # Threshold sweep for best F1-score
+    thresholds = np.unique(np.concatenate([
+        np.quantile(scores[np.isfinite(scores)], np.linspace(0.85, 0.999, 250)),
+        np.array([0.0, np.inf])
+    ]))
+    best_f1 = -1.0
+    best_threshold = 0.0
+    best_precision = 0.0
+    best_recall = 0.0
+    for threshold in thresholds:
+        preds = (scores >= threshold).astype(int)
+        precision = precision_score(labels, preds, zero_division=0)
+        recall = recall_score(labels, preds, zero_division=0)
+        f1 = f1_score(labels, preds, zero_division=0)
+        if f1 > best_f1:
+            best_f1 = f1
+            best_threshold = threshold
+            best_precision = precision
+            best_recall = recall
+
     # Multi-K Evaluation
     k_values = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
     print("\nEvaluation Results")
     print("===========================")
     print(f"AUC-ROC: {auc:.4f}")
+    print(f"Best F1 threshold: {best_threshold:.6f}")
+    print(f"Best F1-Score: {best_f1:.4f}")
+    print(f"Precision@best-threshold: {best_precision:.4f}")
+    print(f"Recall@best-threshold: {best_recall:.4f}")
     print("-" * 60)
 
     for K in k_values:

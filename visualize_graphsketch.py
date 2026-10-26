@@ -9,7 +9,7 @@ try:
     with open(file_path, "r") as file:
         for line in file:
             parts = line.strip().split(",")  # Format: timestamp,score
-            if len(parts) == 2:
+            if len(parts) == 32:
                 timestamp, score = int(parts[0]), float(parts[1])
                 data.append((timestamp, score))
 
@@ -35,5 +35,5 @@ try:
 
 except FileNotFoundError:
     print(f"Error: {file_path} not found! Make sure score.txt exists.")
-except Exception as e:
-    print(f"Error processing file: {e}")
+# except Exception as e:
+#     print(f"Error processing file: {e}")
